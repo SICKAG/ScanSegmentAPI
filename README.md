@@ -1,92 +1,176 @@
 # ScanSegmentAPI
 
-Phython API to receive scan segment data either in MSGPACK format or in compact format
+This project contains scripts written in Python which receive and parse scan segments from SICK Lidar sensors, either in the Compact or in the MSGPACK format. The scripts which do the actual parsing are located in `api/msgpack.py` and `api/compact.py` respectively. They are written and documented with the intention to support the understanding of the two data formats. The scripts are not optimized for performance and not intended to be used in productive code.
 
-## Getting started
+To quickly test that data from a SICK Lidar sensor is received successfully on your client, the [command line tool](#using-the-command-line-interface) `scansegmentapi.py` can be used. Hints for the configuration of the sensor and the network of the client PC can be found [here](#hints-on-sensor-and-network-configuration).
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+To use the parsers in a python script, this package can simply be imported as shown in the [examples below](#using-the-scansegmentapi-from-python).
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+Finally, sample binary files with MSGPACK data and Compact data are provided in ´tests/sample_files´. They can be used to check whether the parsing results of your own parser  match with the results of the scripts provided here. Some documentation on the sample binary files is found in [tests/sample_files/README.md](/tests/sample_files/README.md).
 
-## Add your files
+## Prerequisites
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+This project relies on [Poetry](https://python-poetry.org/) for dependency management and execution of the virtual
+python environment. Detailed installation instructions for each platform can be found
+[here](https://python-poetry.org/docs/).
+
+## Project setup
+
+To install the project dependencies run:
+
+```bash
+$ poetry install
+```
+
+## Using the command-line interface scansegmentapi.py
+
+In general all Python scripts must be executed via Poetry either in a single command:
+
+```bash
+$ poetry run python <script1>
+$ poetry run python <script2>
+$ ...
+```
+
+or by first starting the Poetry shell:
+
+```bash
+$ poetry shell
+$ python <script1>
+$ python <script2>
+$ ...
+```
+
+You can always view help with the built-in help option `--help, -h`:
+
+```bash
+$ poetry run python scansegmentapi.py -h
+```
+
+This will display a list of the available subcommands. Further help on the subcommands and their options can be retrieved
+using:
+
+```bash
+$ poetry run python scansegmentapi.py <subcommand> -h
+```
+
+If no device is at hand, one of the provided sample files can be used to test if the project was correctly set up using
+the `read` subcommand.
+
+```bash
+$ poetry run python scansegmentapi.py read msgpack -i ./tests/sample_files/sample.msgpack
+$ poetry run python scansegmentapi.py read compact -i ./tests/sample_files/sample.compact
+```
+
+### Receiving data from a device
+
+To receive segments sent by a SICK Lidar sensor the `receive` subcommand has to be used as follows:
+
+```bash
+$ poetry run python scansegmentapi.py receive compact # or 'msgpack' respectively.
+```
+
+By default this command listens on
+`localhost` at port `2115` for incoming data. If the device is located in a different subnetwork the host address to
+use for listening can be changed using the `--host` command-line option. Note that the host address is the ip address of the network adapter of the client PC, not of the sensor. The port can be changed using `-p` or `--port`
+flag:
+
+```bash
+$ poetry run python scansegmentapi.py receive compact --host 192.168.0.100 --port 2115 # or 'msgpack' respectively.
+```
+
+
+## Using the ScanSegmentAPI from Python
+To receive data from a SICK Lidar sensor in a Python script, the ScanSegmentAPI can be imported and the parsers can be instantiated.
+
+Example for MSGPACK where the address `192.168.0.100` is the ip address of the network adapter of the client PC (not of the sensor!) and `2115` is the used port.
+
+```python
+import scansegmentapi.api.msgpack as MSGPACKApi
+
+if __name__ == "__main__":
+    receiver = MSGPACKApi.Receiver(port=2115, host="192.168.0.100")
+    (segments, frameNumbers, segmentCounters) = receiver.receiveSegments(200)
+    receiver.closeConnection()
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.sickcn.net/GBC08/development/research/datarecording/scansegmentapi.git
-git branch -M main
-git push -uf origin main
+
+Example for Compact where the address `192.168.0.100` is the ip address of the network adapter of the client PC (not of the sensor!) and `2115` is the used port.
+
+```python
+import scansegmentapi.api.compact as CompactApi
+
+if __name__ == "__main__":
+    receiver = CompactApi.Receiver(port=2115, host="192.168.0.100")
+    (segments, frameNumbers, segmentCounters) = receiver.receiveSegments(200)
+    receiver.closeConnection()
 ```
 
-## Integrate with your tools
+---
+**NOTE**
 
-- [ ] [Set up project integrations](https://gitlab.sickcn.net/GBC08/development/research/datarecording/scansegmentapi/-/settings/integrations)
+The above snippets assume that code of the ScanSegmentAPI is located in a subdirectory of the current working directory named `scansegmentapi`. If you place your code directly in the directory with the ScanSegmentAPI code for example, the import statement has to be modified to `import api.msgpack` and `import api.compact` respectively.
 
-## Collaborate with your team
+---
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+## Examples
+More examples of the usage of the ScanSegmentAPI can be found in the examples directory.
 
-## Test and Deploy
+## Hints on sensor and network configuration
 
-Use the built-in continuous integration in GitLab.
+If no data can be received from a SICK Lidar sensor or errors are reported in the data stream, here are some hints how to solve common problems.
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+### Configure correct IP adress and port
+If no data is received at all, make sure that the correct port and the correct IP address of the client PC are configured on the sensor.
 
-***
+<img src="doc/port_and_ip_on_the_sensor.png" width="350"/>
 
-# Editing this README
+### Set network category to 'Private'
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!).  Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
+On Windows PCs the network category of the used network adapter has to be configured to 'Private'. To do so, open the Windows Powershell with administrator privileges and check the network category and the interface index of the network adapter which is used for communication with the Lidar sensor.
 
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+<img src="doc/get_net_connection_profile.png" width="350"/>
 
-## Name
-Choose a self-explaining name for your project.
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+Then set the network category to 'Private' for the corresponding interface using the following command:
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+`Set-NetConnectionProfile -InterfaceIndex <index as retrived> -NetworkCategory Private`
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+### Configure correct data format
+If data is received but a CRC check error is shown as output of the Python script, a reason might be that the wrong output data format is configured on the sensor. Make sure that MSGPACK output is configured when using the MSGPACK Python api and Compact is configured when using the Compact Python API.
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+<img src="doc/format_selection_on_the_sensor.png" width="350"/>
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+## Jupyter Notebook support in Visual Studio Code
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+In order to use the api inside Jupyter notebooks executed inside Visual Studio Code the appropriate virtual environment
+has to be selected as shown in the image below:
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+<img src="doc/poetry_jupyter.png" width="700"/>
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+In many cases, Visual Stuio Code recognizes the correct virtual environment by itself.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+## Dependencies
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+This module relies on the following dependencies which are downloaded during the build process
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+| Name               | Version   | License                                                 | URL                                          |
+|--------------------|-----------|---------------------------------------------------------|----------------------------------------------|
+| attrs              | 22.2.0    | [MIT License](https://spdx.org/licenses/MIT.html)                        | https://www.attrs.org/                       |
+| certifi            | 2023.5.7 | [Mozilla Public License 2.0 (MPL 2.0)](https://mozilla.org/MPL/2.0/)     | https://github.com/certifi/python-certifi    |
+| charset-normalizer | 3.1.0     | [MIT License](https://spdx.org/licenses/MIT.html)                        | https://github.com/Ousret/charset_normalizer |
+| colorama           | 0.4.6     | [BSD-3-Clause License](https://spdx.org/licenses/BSD-3-Clause.html)      | https://github.com/tartley/colorama          |
+| coverage           | 7.2.5     | [Apache-2.0 License](http://www.apache.org/licenses/LICENSE-2.0)         | https://github.com/nedbat/coveragepy         |
+| exceptiongroup     | 1.1.1     | [MIT License](https://spdx.org/licenses/MIT.html)                        | https://github.com/agronholm/exceptiongroup  |
+| idna               | 3.4       | [BSD-3-Clause License](https://spdx.org/licenses/BSD-3-Clause.html)      | https://github.com/kjd/idna                  |
+| iniconfig          | 2.0.0     | [MIT License](https://spdx.org/licenses/MIT.html)                        | https://github.com/pytest-dev/iniconfig      |
+| msgpack            | 1.0.5     | [Apache-2.0 License](http://www.apache.org/licenses/LICENSE-2.0)         | https://msgpack.org/                         |
+| numpy              | 1.24.3    | [BSD-3-Clause License](https://spdx.org/licenses/BSD-3-Clause.html)      | https://www.numpy.org                        |
+| packaging          | 23.1      | [Apache-2.0 License](http://www.apache.org/licenses/LICENSE-2.0); [BSD-3-Clause](https://spdx.org/licenses/BSD-3-Clause.html)               | https://github.com/pypa/packaging            |
+| pluggy             | 1.0.0     | [MIT License](https://spdx.org/licenses/MIT.html)                        | https://github.com/pytest-dev/pluggy         |
+| pytest             | 7.3.1     | [MIT License](https://spdx.org/licenses/MIT.html)                        | https://docs.pytest.org/en/latest/           |
+| pytest-cov         | 4.0.0     | [MIT License](https://spdx.org/licenses/MIT.html)                        | https://github.com/pytest-dev/pytest-cov     |
+| requests           | 2.30.0    | [Apache-2.0 License](http://www.apache.org/licenses/LICENSE-2.0)         | https://requests.readthedocs.io              |
+| scansegmentdecoding   | 2.0.3     | [MIT License](https://spdx.org/licenses/MIT.html)                        | https://github.com/SICKAG/scansegmentdecoding |
+| tomli              | 2.0.1     | [MIT License](https://spdx.org/licenses/MIT.html)                        | https://github.com/hukkin/tomli              |
+| urllib3            | 2.0.2   | [MIT License](https://spdx.org/licenses/MIT.html)                        | https://urllib3.readthedocs.io/              |

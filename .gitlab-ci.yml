@@ -1,0 +1,51 @@
+include:
+  - project: "GBC08/development/devices/shared/devicescripts/bu83_python_pipeline"
+    ref: 0.9.0
+    file: "build-template.yaml"
+
+variables:
+  PROJECT_NAME: "api"
+
+  ENABLE_PYCODESTYLE: "False"
+  ENABLE_PYLINT: "False" # We don't want to include pylint because of license issues.
+  ENABLE_DEPLOY_TO_ARTIFACTORY: "True"
+  ENABLE_GENERATE_DOCS: "False"
+  ENABLE_RELEASE_DOCS: "False"
+
+  # Vault
+  VAULT_AUTH_ROLE: "gbc08_bu83_readonly"
+  VAULT_SERVER_URL: "https://csxvault.sickcn.net"
+
+.inject_secrets:
+  secrets:
+    USER:
+      vault: readonly/builduser/user@GBC08_BU83
+      file: false
+    APITOKEN:
+      vault: readonly/builduser/key@GBC08_BU83
+      file: false
+
+.setup_pypi_mirror:
+  before_script:
+    - poetry source add pypi-mirror https://deagxartifactory.sickcn.net/artifactory/api/pypi/pypi/simple --default
+    - poetry source add bu83-pypi https://deagxartifactory.sickcn.net/artifactory/api/pypi/gbc08-pypi-local/simple --secondary
+
+# Override .default_runner_windows job from the python pipeline to extend .default_runner
+.default_runner_windows:
+  tags:
+    - os_windows
+    - type_docker
+  before_script:
+    - pip install poetry
+    - !reference [.setup_pypi_mirror, before_script]
+
+
+
+# Override .default_runner_linux job from the python pipeline to extend .default_runner
+.default_runner_linux:
+  tags:
+    - type_docker
+    - os_linux
+  before_script:
+    - pip install --upgrade poetry
+    - !reference [.setup_pypi_mirror, before_script]

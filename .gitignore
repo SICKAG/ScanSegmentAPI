@@ -1,0 +1,12 @@
+# Python files.
+__pycache__
+.pytest_cache
+dist/
+
+# IDE files.
+.vscode
+
+# Code coverage files.
+.coverage
+report.xml
+reports
