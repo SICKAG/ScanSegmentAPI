@@ -36,7 +36,7 @@ variables:
     - os_windows
     - type_docker
   before_script:
-    - pip install poetry
+    - pip install poetry==1.4.2
     - !reference [.setup_pypi_mirror, before_script]
 
 
@@ -47,5 +47,5 @@ variables:
     - type_docker
     - os_linux
   before_script:
-    - pip install --upgrade poetry
+    - pip install --upgrade poetry==1.4.2
     - !reference [.setup_pypi_mirror, before_script]

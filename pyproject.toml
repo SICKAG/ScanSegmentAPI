@@ -1,14 +1,15 @@
 [tool.poetry]
 name = "scansegmentapi"
-version = "2.0.0"
+version = "2.0.1"
 description = "API to access data in MSGPACK or Compact format."
 authors = ["Matthias Honal", "Alexander Weinmann", "Robert Koch"]
+packages = [{include = "api"}]
 
 [tool.poetry.dependencies]
 python = "^3.9"
 numpy = "^1.22.3"
 msgpack = "^1.0.3"
-scansegmentdecoding = "^2.0.3"
+scansegmentdecoding = "^2.0.4"
 
 [tool.poetry.dev-dependencies]
 pytest-cov = "^4.0.0"
