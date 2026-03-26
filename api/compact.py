@@ -2,6 +2,9 @@
 # Copyright (c) 2023 SICK AG
 # SPDX-License-Identifier: MIT
 #
+from typing import Any
+import logging
+
 from scansegmentdecoding import connectionHandler
 
 import numpy as np
@@ -10,12 +13,15 @@ import sys
 import zlib
 
 
+logger = logging.getLogger("scansegmentapi")
+
+
 def parseFromFile(filename):
     """
     Reads a Compact formatted binary file and parses its content to a dictionary.
     """
     with open(filename, "rb") as f:
-        print(f"Parsing {filename}...")
+        logger.info(f"Parsing {filename}...")
         byte_data = f.read()
         payload = _verifyAndExtractPayload(byte_data)
         return parsePayload(payload)
@@ -36,7 +42,7 @@ def parsePayload(payload):
     # With X = size of module 1 + 32
     #      Y = size of module 2 + size of module 1 + 32
     #
-    result = {
+    result: dict[str, Any] = {
         "Modules": []
     }
     (header, next_module_size) = _readHeader(payload)
@@ -49,7 +55,7 @@ def parsePayload(payload):
         last_module_size = next_module_size
         (module_data, next_module_size) = _readNextModule(payload, offset)
         if module_data is None:
-            print(f"Failed to read module data.", file=sys.stderr)
+            logger.warning(f"Failed to read module data.")
             return None
         result["Modules"].append(module_data)
         offset += last_module_size
@@ -68,16 +74,16 @@ def _verifyAndExtractPayload(data):
 
     # Check if frame header is included.
     if b'\x02\x02\x02\x02' != bytes_frame_start:
-        print(
-            "Missing start of frame sequence [0x02 0x02 0x02 0x02].", file=sys.stderr)
+        logger.warning(
+            "Missing start of frame sequence [0x02 0x02 0x02 0x02].")
         return None
 
     # Apply CRC
     expected_crc = int.from_bytes(bytes_crc, 'little')
     computed_crc = zlib.crc32(bytes_payload)
     if expected_crc != computed_crc:
-        print(
-            f"CRC failed. Expected {expected_crc}, got {computed_crc}.", file=sys.stderr)
+        logger.warning(
+            f"CRC failed. Expected {expected_crc}, got {computed_crc}.")
         return None
 
     return bytes_payload
@@ -129,7 +135,8 @@ def _readNextModule(data, offset):
     # Merge metadata and beam data into a single dictionary.
     module_data = {}
     module_data.update(metadata)
-    module_data.update(beamdata)
+    if beamdata is not None:
+        module_data.update(beamdata)
 
     return (module_data, next_module_size)
 
@@ -232,8 +239,8 @@ def _readBeamData(data, metadata, offset):
     } for n in range(num_layers)]
 
     if not metadata["HasDistance"]:
-        print(
-            f"Failed to read beam data from module. No distance data available. Metadata: {metadata}", file=sys.stderr)
+        logger.warning(
+            f"Failed to read beam data from module. No distance data available. Metadata: {metadata}")
         return None
 
     # Format string used when data is unpacked. For example for three echos, when all data channels are active the
@@ -315,7 +322,7 @@ def _readUint(data, offset, value_size):
     integer is returned.
     """
     value = int.from_bytes(
-        data[offset:offset+value_size], byteorder='little', signed='false')
+        data[offset:offset+value_size], byteorder='little', signed=False)
     return (value, offset + value_size)
 
 
@@ -387,21 +394,21 @@ class Receiver:
         for i in range(0, nbSegments):
             bytes_received, _ = self.connection.receiveNewScanSegment()
             if self.connection.hasNoError():
-                print(f"Received segment {i}.")
+                logger.info(f"Received segment {i}.")
                 payload = _verifyAndExtractPayload(bytes_received)
                 if payload is None:
-                    print(f"Failed to extract payload from data.", file=sys.stderr)
+                    logger.warning("Failed to extract payload from data.")
                     continue
                 segmentdata = parsePayload(payload)
-                if segmentdata is None:
-                    print(f"Failed to parse segment data from payload.",
-                          file=sys.stderr)
-                segments_received.append(segmentdata)
-                frame_numbers.append(segmentdata["Modules"][0]['FrameNumber'])
-                segment_numbers.append(
-                    segmentdata["Modules"][0]['SegmentCounter'])
+                if segmentdata is not None:
+                    segments_received.append(segmentdata)
+                    frame_numbers.append(segmentdata["Modules"][0]['FrameNumber'])
+                    segment_numbers.append(
+                        segmentdata["Modules"][0]['SegmentCounter'])
+                else:
+                    logger.warning("Failed to parse segment data from payload.")
             else:
-                print(
-                    f"Failed to receive segment. Error code {self.connection.getLastErrorCode}: {self.connection.lastErrorMessage}", file=sys.stderr)
+                logger.error(
+                    f"Failed to receive segment. Error code {self.connection.getLastErrorCode}: {self.connection.lastErrorMessage}")
 
         return (segments_received, frame_numbers, segment_numbers)

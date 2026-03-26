@@ -2,6 +2,8 @@
 # Copyright (c) 2023 SICK AG
 # SPDX-License-Identifier: MIT
 #
+import logging
+
 from scansegmentdecoding import connectionHandler
 from scansegmentdecoding import msgpackUtil
 from scansegmentdecoding import decodeUtil
@@ -10,12 +12,15 @@ import sys
 import zlib
 
 
+logger = logging.getLogger("scansegmentapi")
+
+
 def parseFromFile(filename):
     """
     Reads a Msgpack formatted binary file and parses its content to a dictionary.
     """
     with open(filename, "rb") as f:
-        print(f"Parsing {filename}...")
+        logger.info(f"Parsing {filename}...")
         byte_data = f.read()
         return parsePayload(byte_data)
 
@@ -55,23 +60,23 @@ def _verifyAndExtractPayload(data):
 
     # Check if frame header is included.
     if b'\x02\x02\x02\x02' != bytes_frame_start:
-        print(
-            "Missing start of frame sequence [0x02 0x02 0x02 0x02].", file=sys.stderr)
+        logger.warning(
+            "Missing start of frame sequence [0x02 0x02 0x02 0x02].")
         return None
 
     # Check if received payload length matches expected one.
     expected_payload_length = int.from_bytes(bytes_payload_length, 'little')
     if expected_payload_length != len(bytes_payload):
-        print(
-            f"Actual length of payload and expected length do not match. Expected {expected_payload_length} bytes, got {len(bytes_payload)}.", file=sys.stderr)
+        logger.warning(
+            f"Actual length of payload and expected length do not match. Expected {expected_payload_length} bytes, got {len(bytes_payload)}.")
         return None
 
     # Apply CRC.
     expected_crc = int.from_bytes(bytes_crc, 'little')
     computed_crc = zlib.crc32(bytes_payload)
     if expected_crc != computed_crc:
-        print(
-            "CRC failed. Expected {expected_crc}, got {computed_crc}.", file=sys.stderr)
+        logger.warning(
+            f"CRC failed. Expected {expected_crc}, got {computed_crc}.")
         return None
 
     return bytes_payload
@@ -149,7 +154,7 @@ class Receiver:
         for i in range(0, nbSegments):
             bytes_received, _ = self.connection.receiveNewScanSegment()
             if self.connection.hasNoError():
-                print(f"Received segment {i}.")
+                logger.info(f"Received segment {i}.")
                 payload = _verifyAndExtractPayload(bytes_received)
                 if payload is not None:
                     (curSegment, curFrameNumber,
@@ -158,8 +163,8 @@ class Receiver:
                     frame_numbers.append(curFrameNumber)
                     segment_numbers.append(curSegmentNumber)
                 else:
-                    print(f"Failed to extract payload from data.", file=sys.stderr)
+                    logger.warning("Failed to extract payload from data.")
             else:
-                print(
-                    f"Failed to receive segment. Error code {self.connection.getLastErrorCode}: {self.connection.lastErrorMessage}", file=sys.stderr)
+                logger.error(
+                    f"Failed to receive segment. Error code {self.connection.getLastErrorCode}: {self.connection.lastErrorMessage}")
         return (segments_received, frame_numbers, segment_numbers)

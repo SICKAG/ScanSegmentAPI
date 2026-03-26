@@ -5,9 +5,13 @@
 
 import sys
 import zlib
+import logging
 
 from scansegmentapi import msgpack_util
 from scansegmentapi import decode_util
+
+
+logger = logging.getLogger("scansegmentapi")
 
 
 def parse_from_file(filename):
@@ -15,7 +19,7 @@ def parse_from_file(filename):
     Reads a Msgpack formatted binary file and parses its content to a dictionary.
     """
     with open(filename, "rb") as f:
-        print(f"Parsing {filename}...")
+        logger.info(f"Parsing {filename}...")
         byte_data = f.read()
         return parse_payload(byte_data)
 
@@ -56,24 +60,24 @@ def _verify_and_extract_payload(data):
 
     # Check if frame header is included.
     if b'\x02\x02\x02\x02' != bytes_frame_start:
-        print(
-            "Missing start of frame sequence [0x02 0x02 0x02 0x02].", file=sys.stderr)
+        logger.warning(
+            "Missing start of frame sequence [0x02 0x02 0x02 0x02].")
         return None
 
     # Check if received payload length matches expected one.
     expected_payload_length = int.from_bytes(bytes_payload_length, 'little')
     if expected_payload_length != len(bytes_payload):
-        print(
+        logger.warning(
             f"Actual length of payload and expected length do not match. \
-            Expected {expected_payload_length} bytes, got {len(bytes_payload)}.", file=sys.stderr)
+            Expected {expected_payload_length} bytes, got {len(bytes_payload)}.")
         return None
 
     # Apply CRC.
     expected_crc = int.from_bytes(bytes_crc, 'little')
     computed_crc = zlib.crc32(bytes_payload)
     if expected_crc != computed_crc:
-        print(
-            "CRC failed. Expected {expected_crc}, got {computed_crc}.", file=sys.stderr)
+        logger.warning(
+            "CRC failed. Expected {expected_crc}, got {computed_crc}.")
         return None
 
     return bytes_payload
@@ -143,7 +147,7 @@ class Receiver:
         for i in range(0, nb_segments):
             bytes_received, _ = self.transport_layer.receive_new_scan_segment()
             if self.transport_layer.has_no_error():
-                print(f"Received segment {i}.")
+                logger.info(f"Received segment {i}.")
                 payload = _verify_and_extract_payload(bytes_received)
                 if payload is not None:
                     (cur_segment, cur_frame_number,
@@ -152,10 +156,10 @@ class Receiver:
                     frame_numbers.append(cur_frame_number)
                     segment_numbers.append(cur_segment_number)
                 else:
-                    print("Failed to extract payload from data.", file=sys.stderr)
+                    logger.warning("Failed to extract payload from data.")
             else:
-                print(
+                logger.error(
                     f"Failed to receive segment. Error code \
                     {self.transport_layer.get_last_error_code()}: \
-                    {self.transport_layer.last_error_message}", file=sys.stderr)
+                    {self.transport_layer.last_error_message}")
         return (segments_received, frame_numbers, segment_numbers)

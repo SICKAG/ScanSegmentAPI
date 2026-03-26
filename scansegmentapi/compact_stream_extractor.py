@@ -5,6 +5,7 @@
 
 from enum import Enum
 import zlib
+import logging
 
 STX = b'\x02\x02\x02\x02'  # Marks the start of a Compact data package
 COMMAND_ID = b'\x01\x00\x00\x00'  # Next field in the Compact header after STX
@@ -19,6 +20,7 @@ NUMBER_OF_LINES_OFFSET = 20
 NEXT_MODULE_SIZE_OFFSET_PER_LINE = 28
 NEXT_MODULE_SIZE_OFFSET = 36
 
+logger = logging.getLogger("scansegmentapi")
 
 class State(Enum):
     WAITING_FOR_STX = 1
@@ -87,7 +89,7 @@ class CompactStreamExtractor():
         """
         next_module_size = self._decode_uint32(position)
         if next_module_size > 5e6:
-            print("Warning: Got unusually large module size: ", next_module_size)
+            logger.warning("Got unusually large module size: ", next_module_size)
         return next_module_size
 
     def _decode_uint32(self, position: int) -> int:
@@ -143,7 +145,7 @@ class CompactStreamExtractor():
         self.payload_size = self._read_next_module_size(FIRST_MODULE_SIZE_OFFSET)
 
         if self.payload_size == 0:
-            print("The size of the first module must not be 0. Discarding STX.")
+            logger.warning("The size of the first module must not be 0. Discarding STX.")
             self._discard_stx()
             return self._wait_for_stx()
 
@@ -215,7 +217,7 @@ class CompactStreamExtractor():
         expected_crc = self._decode_uint32(LENGTH_COMPACT_HEADER + self.payload_size)
         computed_crc = zlib.crc32(self.buffer[:LENGTH_COMPACT_HEADER + self.payload_size])
         if expected_crc != computed_crc:
-            print("CRC failed. Not synchronized. Discarding STX.")
+            logger.warning("CRC failed. Not synchronized. Discarding STX.")
             self._discard_stx()
             return self._wait_for_stx()
 
