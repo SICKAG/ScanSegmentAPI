@@ -1,6 +1,6 @@
 include:
   - project: "GBC08/development/devices/shared/devicescripts/bu83_python_pipeline"
-    ref: 0.13.0
+    ref: 2.1.1
     file: "build-template.yaml"
 
 variables:
@@ -11,10 +11,6 @@ variables:
   ENABLE_DEPLOY_TO_ARTIFACTORY: "True"
   ENABLE_GENERATE_DOCS: "False"
   ENABLE_RELEASE_DOCS: "False"
-
-  # Vault
-  VAULT_AUTH_ROLE: "gbc08_bu83_readonly"
-  VAULT_SERVER_URL: "https://csxvault.sickcn.net"
 
   POETRY_VERSION: 1.5.1
 

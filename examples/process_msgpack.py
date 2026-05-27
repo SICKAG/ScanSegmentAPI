@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023-2024 SICK AG
+# Copyright (c) 2023-2026 SICK AG
 # SPDX-License-Identifier: MIT
 #
 # This program receives scan segments in MSGPACK format.
@@ -13,6 +13,13 @@
 # For all these segments the frame number and the segment counter
 # and the start angle of the first scan are retrieved and printed.
 
+import numpy as np
+import logging
+import scansegmentapi.msgpack as MSGPACKApi
+from scansegmentapi.tcp_handler import TCPHandler
+from scansegmentapi.msgpack_stream_extractor import MsgpackStreamExtractor
+from scansegmentapi.udp_handler import UDPHandler
+
 # Port used for data streaming. Enter the port configured in your device.
 PORT = 2115
 
@@ -23,11 +30,12 @@ IP = "192.168.0.100"
 # Select with which transport protocol the data should be received. Select "TCP" or "UDP".
 TRANSPORT_PROTOCOL = "UDP"
 
-import numpy as np
-import scansegmentapi.msgpack as MSGPACKApi
-from scansegmentapi.tcp_handler import TCPHandler
-from scansegmentapi.msgpack_stream_extractor import MsgpackStreamExtractor
-from scansegmentapi.udp_handler import UDPHandler
+# Explicitly configure the logger
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(name)s %(levelname)s: %(message)s"
+)
+logging.getLogger("scansegmentapi").setLevel(logging.INFO)
 
 if __name__ == "__main__":
     if "UDP" == TRANSPORT_PROTOCOL:

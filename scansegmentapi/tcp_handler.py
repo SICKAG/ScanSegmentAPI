@@ -6,7 +6,12 @@
 from queue import Queue
 import socket
 import time
+import logging
+
 from scansegmentapi.transport_handler import TransportHandler
+
+
+logger = logging.getLogger("scansegmentapi")
 
 
 class TCPHandler(TransportHandler):
@@ -55,7 +60,7 @@ class TCPHandler(TransportHandler):
     def _open_tcp_socket(self):
         self.client = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
         self.client.settimeout(self.rec_timeout)
-        print(f"Connecting to TCP:{self.server_ip}:{self.server_port}")
+        logger.info(f"Connecting to TCP:{self.server_ip}:{self.server_port}")
         self.client.connect((self.server_ip, self.server_port))
 
     def receive_new_scan_segment(self) -> tuple[bytes, str]:
@@ -83,16 +88,20 @@ class TCPHandler(TransportHandler):
                     self.received_segments.put(received_segment)
 
             if time.time() >= timeout:
-                print("No data packages could be found in the data stream within 5 seconds.")
+                logger.warning("No data packages could be found in the data stream within 5 seconds.")
                 return bytes(), ""
 
             return self.received_segments.get(), self.server_ip
         except TimeoutError as e:
-            print(e)
+            logger.exception(e)
             return bytes(), ""
         except socket.error as error:
             self.no_error_flag = False
             self.last_error_code = error.errno
             self.last_error_message = str(error)
-            print(f"Error while receiving TCP data. Error Code: {error.errno}.")
+            logger.exception(error)
             return bytes(), ""
+
+    def close(self):
+        """Closes the connection to the server."""
+        self.client.close()

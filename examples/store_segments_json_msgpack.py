@@ -1,13 +1,15 @@
 #
-# Copyright (c) 2023-2024 SICK AG
+# Copyright (c) 2023-2026 SICK AG
 # SPDX-License-Identifier: MIT
 #
 # This program receives scan segments in MSGPACK format and stores them in
 # json format in a file.
 #
+import logging
 import numpy as np
 import json
 from json import JSONEncoder
+
 import scansegmentapi.msgpack as MSGPACKApi
 from scansegmentapi.tcp_handler import TCPHandler
 from scansegmentapi.msgpack_stream_extractor import MsgpackStreamExtractor
@@ -22,6 +24,13 @@ IP = "192.168.0.100"
 
 # Select with which transport protocol the data should be received. Select "TCP" or "UDP".
 TRANSPORT_PROTOCOL = "UDP"
+
+# Explicitly configure the logger
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(name)s %(levelname)s: %(message)s"
+)
+logging.getLogger("scansegmentapi").setLevel(logging.INFO)
 
 class SegmentEncoder(JSONEncoder):
     def default(self, obj):

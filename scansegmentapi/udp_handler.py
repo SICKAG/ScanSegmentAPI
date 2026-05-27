@@ -4,8 +4,12 @@
 #
 
 import socket
+import logging
 
 from scansegmentapi.transport_handler import TransportHandler
+
+
+logger = logging.getLogger("scansegmentapi")
 
 
 class UDPHandler(TransportHandler):
@@ -62,12 +66,16 @@ class UDPHandler(TransportHandler):
             self.counter += 1
             return data, sender_address
         except TimeoutError as e:
-            print(e)
+            logger.exception(e)
             return bytes(), ""
         except socket.error as error:
             # print error code
             self.no_error_flag = False
             self.last_error_code = error.errno
             self.last_error_message = str(error)
-            print(f"Error receiving udp packet. Error Code: {error.errno}")
+            logger.exception(error)
             return bytes(), ""
+
+    def close(self):
+        """Does not apply to UDP. This is here to have the same interface as the TCPHandler."""
+        pass

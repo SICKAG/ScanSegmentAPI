@@ -5,11 +5,13 @@
 
 from enum import Enum
 import zlib
+import logging
 
 STX = b'\x02\x02\x02\x02'  # Marks the start of a MSGPACK data package
 SIZE_OF_UINT32 = 4
 SIZE_OF_CRC = 4
 
+logger = logging.getLogger("scansegmentapi")
 
 class State(Enum):
     WAITING_FOR_STX = 1
@@ -99,12 +101,12 @@ class MsgpackStreamExtractor():
         self.msgpack_size = self._decode_uint32(len(STX))
 
         if self.msgpack_size == 0:
-            print("The size of the MSGPACK buffer must not be 0. Discarding STX.")
+            logger.warning("The size of the MSGPACK buffer must not be 0. Discarding STX.")
             self._discard_stx()
             return self._wait_for_stx()
 
         if self.msgpack_size > 5e6:
-            print("Warning: Got unusually large MSGPACK buffer size: ", self.msgpack_size)
+            logger.warning("Got unusually large MSGPACK buffer size: ", self.msgpack_size)
 
         return self._wait_for_crc()
 
@@ -127,7 +129,7 @@ class MsgpackStreamExtractor():
             self.buffer[len(STX) + SIZE_OF_UINT32:len(STX) + SIZE_OF_UINT32 + self.msgpack_size])
 
         if expected_crc != computed_crc:
-            print("CRC failed. Not synchronized. Discarding STX.")
+            logger.warning("CRC failed. Not synchronized. Discarding STX.")
             self._discard_stx()
             return self._wait_for_stx()
 

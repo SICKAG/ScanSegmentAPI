@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023-2024 SICK AG
+# Copyright (c) 2023-2026 SICK AG
 # SPDX-License-Identifier: MIT
 #
 # This program receives scan segments in Compact format.
@@ -14,7 +14,9 @@
 # counter for the first module and the start angle of the
 # first scan of the first module are retrieved and printed.
 
+import logging
 import numpy as np
+
 import scansegmentapi.compact as CompactApi
 from scansegmentapi.tcp_handler import TCPHandler
 from scansegmentapi.compact_stream_extractor import CompactStreamExtractor
@@ -29,6 +31,13 @@ IP = "192.168.0.100"
 
 # Select with which transport protocol the data should be received. Select "TCP" or "UDP".
 TRANSPORT_PROTOCOL = "UDP"
+
+# Explicitly configure the logger
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(name)s %(levelname)s: %(message)s"
+)
+logging.getLogger("scansegmentapi").setLevel(logging.INFO)
 
 if __name__ == "__main__":
     if "UDP" == TRANSPORT_PROTOCOL:

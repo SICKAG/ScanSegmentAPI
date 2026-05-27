@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023-2024 SICK AG
+# Copyright (c) 2023-2026 SICK AG
 # SPDX-License-Identifier: MIT
 #
 #
@@ -17,14 +17,15 @@
 # counter for the first module and the start angle of the
 # first scan of the first module are retrieved and printed.
 
+import numpy as np
+import logging
+
 import scansegmentapi.msgpack as MsgpackApi
 import scansegmentapi.compact as CompactApi
 from scansegmentapi.tcp_handler import TCPHandler
 from scansegmentapi.compact_stream_extractor import CompactStreamExtractor
 from scansegmentapi.msgpack_stream_extractor import MsgpackStreamExtractor
 from scansegmentapi.udp_handler import UDPHandler
-
-import numpy as np
 
 ###############################################################################################
 #                                     CONFIGURATION                                           #
@@ -48,6 +49,13 @@ IP = "192.168.0.100"
 
 # Select with which transport protocol the data should be received. Select "TCP" or "UDP".
 TRANSPORT_PROTOCOL = "UDP"
+
+# Explicitly configure the logger
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(name)s %(levelname)s: %(message)s"
+)
+logging.getLogger("scansegmentapi").setLevel(logging.INFO)
 
 
 ##############################################################################################

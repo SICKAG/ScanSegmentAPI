@@ -1,8 +1,9 @@
 #
-# Copyright (c) 2023-2024 SICK AG
+# Copyright (c) 2023-2026 SICK AG
 # SPDX-License-Identifier: MIT
 #
 import argparse
+import logging
 import sys
 
 import scansegmentapi.msgpack as MsgpackApi
@@ -59,6 +60,8 @@ if __name__ == "__main__":
     if len(sys.argv) == 1:
         argparser.print_help()
         sys.exit(0)
+
+    logging.getLogger("scansegmentapi").setLevel(logging.INFO)
 
     # Actual program execution.
     if args.command == "read":
